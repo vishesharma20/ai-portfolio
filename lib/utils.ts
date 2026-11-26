@@ -27,6 +27,22 @@ export function stripHyphens(text: string): string {
   return text.replace(/[\u2010-\u2015\u2212-]/g, " ").replace(/\s{2,}/g, " ").trim();
 }
 
+/** ISO timestamp -> "2 hours ago" / "just now" / "3 days ago", for dashboard "last edited" labels. */
+export function formatRelativeTime(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const minutes = Math.round(diffMs / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.round(hours / 24);
+  if (days < 30) return `${days} day${days === 1 ? "" : "s"} ago`;
+  const months = Math.round(days / 30);
+  if (months < 12) return `${months} month${months === 1 ? "" : "s"} ago`;
+  const years = Math.round(months / 12);
+  return `${years} year${years === 1 ? "" : "s"} ago`;
+}
+
 /** "my-cool_app" -> "My Cool App". Used to turn repo slugs into display titles. */
 export function humanizeSlug(slug: string): string {
   return slug

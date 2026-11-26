@@ -22,6 +22,9 @@ export function Navbar() {
         </nav>
 
         <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/login">Sign in</Link>
+          </Button>
           <Button size="sm" asChild>
             <Link href="/generator">Get started</Link>
           </Button>

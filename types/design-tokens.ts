@@ -19,9 +19,19 @@ export const typographyStyleOptions = [
   "bold-display",
   "handwritten",
   "condensed",
+  "space-grotesk",
+  "dm-sans",
+  "lora-serif",
+  "rubik",
+  "ibm-plex-mono",
+  "fraunces",
+  "manrope",
+  "outfit",
+  "merriweather",
+  "syne",
 ] as const;
 
-export const layoutDensityOptions = ["airy", "balanced", "dense"] as const;
+export const layoutDensityOptions = ["spacious", "airy", "balanced", "dense", "compact"] as const;
 
 export const backgroundStyleOptions = [
   "plain",
@@ -32,6 +42,9 @@ export const backgroundStyleOptions = [
   "dots",
   "noise",
   "rays",
+  "stripes",
+  "rings",
+  "checker",
 ] as const;
 
 export const animationStyleOptions = [
@@ -46,6 +59,16 @@ export const animationStyleOptions = [
   "unfold",
   "flip",
   "none",
+  "swing",
+  "rotate",
+  "squash",
+  "tilt",
+  "spring",
+  "wipe",
+  "glide",
+  "fold",
+  "curtain",
+  "elastic",
 ] as const;
 
 export const designTokensSchema = z.object({
@@ -61,7 +84,7 @@ export const designTokensSchema = z.object({
   animationStyle: z.enum(animationStyleOptions),
   /** Ambient full-page backdrop layer, independent of any uploaded photo backdrop. */
   backgroundStyle: z.enum(backgroundStyleOptions),
-  /** Whether the ambient backdrop layer (gradient/mesh/aurora/rays) drifts continuously. Grid/dots/noise ignore this and stay static either way. */
+  /** Whether the ambient backdrop layer animates. Plain and noise remain static. */
   backgroundAnimated: z.boolean(),
   /** Data URL of an uploaded inspiration image used as a background accent. Empty string = none. */
   backgroundImageUrl: z.string(),

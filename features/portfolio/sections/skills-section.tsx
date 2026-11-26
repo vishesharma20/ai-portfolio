@@ -9,23 +9,27 @@ import { hexToRgba } from "@/lib/design-tokens";
 import { useSectionMotion } from "@/hooks/use-section-motion";
 import { EditableText, focusEditableAtEnd } from "@/components/ui/editable-text";
 import { SectionImageBackdrop } from "@/components/portfolio/section-image-backdrop";
-import { useGeneratorStore, useGeneratorActions } from "@/lib/store/generator-store";
+import { SectionCopy } from "@/types/portfolio";
+import { usePortfolioEdit } from "@/features/portfolio/portfolio-editor-context";
 import { cn } from "@/lib/utils";
 
 interface Props {
   resumeData: ResumeData;
   tokens: DesignTokens;
+  sectionCopy: SectionCopy;
   backdrop?: import("../portfolio-template").ResolvedBackdrop;
+  animationOverride?: DesignTokens["animationStyle"];
 }
 
-export function SkillsSection({ resumeData, tokens, backdrop }: Props) {
-  const motionCfg = useSectionMotion("skills", tokens);
-  const actions = useGeneratorActions();
-  const skillsLabel = useGeneratorStore((s) => s.sectionCopy.skillsLabel);
+export function SkillsSection({ resumeData, tokens, sectionCopy, backdrop, animationOverride }: Props) {
+  const motionCfg = useSectionMotion(animationOverride, tokens);
+  const editCtx = usePortfolioEdit();
+  const skillsLabel = sectionCopy.skillsLabel;
   const listRef = useRef<HTMLDivElement>(null);
 
   const handleAdd = () => {
-    actions.addSkill();
+    if (!editCtx) return;
+    editCtx.addSkill();
     requestAnimationFrame(() => {
       const nodes = listRef.current?.querySelectorAll<HTMLElement>(".editable-text");
       focusEditableAtEnd(nodes?.[nodes.length - 1]);
@@ -46,7 +50,7 @@ export function SkillsSection({ resumeData, tokens, backdrop }: Props) {
         <EditableText
           as="p"
           value={skillsLabel}
-          onCommit={(v) => actions.updateSectionCopy("skillsLabel", v)}
+          onCommit={(v) => editCtx?.updateSectionCopy("skillsLabel", v)}
           placeholder="Skills"
           styleKey="skills.label"
           ringColor={tokens.accentColor}
@@ -72,30 +76,34 @@ export function SkillsSection({ resumeData, tokens, backdrop }: Props) {
             >
               <EditableText
                 value={skill}
-                onCommit={(v) => actions.updateSkill(i, v)}
+                onCommit={(v) => editCtx?.updateSkill(i, v)}
                 placeholder="Skill"
                 ringColor={tokens.accentColor}
                 styleKey={`skill.${i}`}
                 className="min-w-[3ch]"
               />
-              <button
-                type="button"
-                onClick={() => actions.removeSkill(i)}
-                aria-label={`Remove ${skill || "skill"}`}
-                className="ml-1.5 -mr-1 shrink-0 rounded-full p-0.5 opacity-0 transition-opacity hover:bg-black/10 group-hover:opacity-60 hover:!opacity-100"
-              >
-                <X className="h-3 w-3" />
-              </button>
+              {editCtx && (
+                <button
+                  type="button"
+                  onClick={() => editCtx.removeSkill(i)}
+                  aria-label={`Remove ${skill || "skill"}`}
+                  className="ml-1.5 -mr-1 shrink-0 rounded-full p-0.5 opacity-0 transition-opacity hover:bg-black/10 group-hover:opacity-60 hover:!opacity-100"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
             </motion.span>
           ))}
-          <button
-            type="button"
-            onClick={handleAdd}
-            className="flex items-center gap-1 rounded-full border border-dashed px-4 py-2 text-sm opacity-50 transition-opacity hover:opacity-100"
-            style={{ borderColor: hexToRgba(tokens.primaryColor, 0.4) }}
-          >
-            <Plus className="h-3.5 w-3.5" /> Add skill
-          </button>
+          {editCtx && (
+            <button
+              type="button"
+              onClick={handleAdd}
+              className="flex items-center gap-1 rounded-full border border-dashed px-4 py-2 text-sm opacity-50 transition-opacity hover:opacity-100"
+              style={{ borderColor: hexToRgba(tokens.primaryColor, 0.4) }}
+            >
+              <Plus className="h-3.5 w-3.5" /> Add skill
+            </button>
+          )}
         </div>
       </div>
     </section>

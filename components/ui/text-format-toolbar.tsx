@@ -3,6 +3,7 @@
 import { createPortal } from "react-dom";
 import { Minus, Plus, RotateCcw } from "lucide-react";
 import { TextAnimation } from "@/lib/store/generator-store";
+import { typographyStyleOptions } from "@/types/design-tokens";
 
 const SWATCHES = ["#F5F3EE", "#0A0A0A", "#EF4444", "#3B82F6", "#22C55E", "#F59E0B", "#A855F7"];
 const ANIMATIONS: { value: TextAnimation; label: string }[] = [
@@ -11,15 +12,21 @@ const ANIMATIONS: { value: TextAnimation; label: string }[] = [
   { value: "fade", label: "Fade" },
   { value: "bounce", label: "Bounce" },
   { value: "slide", label: "Slide" },
+  { value: "zoom", label: "Zoom" },
+  { value: "flip", label: "Flip" },
+  { value: "pulse", label: "Pulse" },
+  { value: "rotate", label: "Rotate" },
 ];
 
 interface TextFormatToolbarProps {
   rect: DOMRect;
   color: string;
   animation: TextAnimation;
+  typographyStyle: (typeof typographyStyleOptions)[number];
   hasOverride: boolean;
   onColorChange: (color: string) => void;
   onAnimationChange: (animation: TextAnimation) => void;
+  onTypographyChange: (typographyStyle: (typeof typographyStyleOptions)[number]) => void;
   onGrow: () => void;
   onShrink: () => void;
   onReset: () => void;
@@ -32,9 +39,11 @@ export function TextFormatToolbar({
   rect,
   color,
   animation,
+  typographyStyle,
   hasOverride,
   onColorChange,
   onAnimationChange,
+  onTypographyChange,
   onGrow,
   onShrink,
   onReset,
@@ -43,7 +52,7 @@ export function TextFormatToolbar({
 }: TextFormatToolbarProps) {
   if (typeof document === "undefined") return null;
 
-  const top = Math.max(8, rect.top - 84);
+  const top = Math.max(8, rect.top - 126);
   const left = Math.min(Math.max(8, rect.left), window.innerWidth - 280);
 
   return createPortal(
@@ -137,6 +146,23 @@ export function TextFormatToolbar({
           </button>
         ))}
       </div>
+      <label className="flex items-center gap-2 px-1 text-[10px] text-muted-foreground">
+        Font
+        <select
+          aria-label="Choose font for selected text"
+          value={typographyStyle}
+          onChange={(event) => onTypographyChange(event.target.value as (typeof typographyStyleOptions)[number])}
+          onMouseDown={(event) => {
+            event.stopPropagation();
+            onInteractionStart();
+          }}
+          className="min-w-0 flex-1 rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground"
+        >
+          {typographyStyleOptions.map((option) => (
+            <option key={option} value={option}>{option.replace(/-/g, " ")}</option>
+          ))}
+        </select>
+      </label>
     </div>,
     document.body
   );

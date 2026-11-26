@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { DesignTokens } from "@/types/design-tokens";
 import { hexToRgba } from "@/lib/design-tokens";
+import { usePrefersReducedMotion } from "@/hooks/use-reduced-motion";
 
 interface Props {
   tokens: DesignTokens;
@@ -13,11 +14,13 @@ interface Props {
  * backdrop (SectionImageBackdrop). This is what gives the page a "designed"
  * feel even with zero uploads — a gradient wash, a mesh of soft color blobs,
  * a slow-drifting aurora, a technical grid, a dot field, film-grain noise,
- * or rotating rays. Sits behind everything, ignores pointer events, and
+ * rotating rays, stripes, rings, or checker patterns. Sits behind everything, ignores pointer events, and
  * respects `backgroundAnimated` for the styles that loop continuously.
  */
 export function AmbientBackground({ tokens }: Props) {
-  const { backgroundStyle, backgroundAnimated, primaryColor, accentColor, backgroundColor } = tokens;
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const { backgroundStyle, backgroundAnimated: backgroundAnimatedRaw, primaryColor, accentColor, backgroundColor } = tokens;
+  const backgroundAnimated = backgroundAnimatedRaw && !prefersReducedMotion;
 
   if (backgroundStyle === "plain") return null;
 
@@ -132,6 +135,44 @@ export function AmbientBackground({ tokens }: Props) {
           }}
           animate={backgroundAnimated ? { rotate: 360 } : undefined}
           transition={backgroundAnimated ? { duration: 90, repeat: Infinity, ease: "linear" } : undefined}
+        />
+      )}
+
+      {backgroundStyle === "stripes" && (
+        <motion.div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `repeating-linear-gradient(135deg, ${hexToRgba(primaryColor, 0.14)} 0 2px, transparent 2px 24px)`,
+            maskImage: "linear-gradient(135deg, black, transparent 85%)",
+          }}
+          animate={backgroundAnimated ? { backgroundPosition: ["0px 0px", "48px 0px"] } : undefined}
+          transition={backgroundAnimated ? { duration: 18, repeat: Infinity, ease: "linear" } : undefined}
+        />
+      )}
+
+      {backgroundStyle === "rings" && (
+        <motion.div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `repeating-radial-gradient(circle at 50% 20%, transparent 0 28px, ${hexToRgba(accentColor, 0.16)} 29px 30px, transparent 31px 58px)`,
+            maskImage: "linear-gradient(to bottom, black, transparent 90%)",
+          }}
+          animate={backgroundAnimated ? { scale: [1, 1.06, 1], opacity: [0.65, 1, 0.65] } : undefined}
+          transition={backgroundAnimated ? { duration: 16, repeat: Infinity, ease: "easeInOut" } : undefined}
+        />
+      )}
+
+      {backgroundStyle === "checker" && (
+        <motion.div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `linear-gradient(45deg, ${hexToRgba(primaryColor, 0.12)} 25%, transparent 25%, transparent 75%, ${hexToRgba(primaryColor, 0.12)} 75%), linear-gradient(45deg, ${hexToRgba(accentColor, 0.1)} 25%, transparent 25%, transparent 75%, ${hexToRgba(accentColor, 0.1)} 75%)`,
+            backgroundSize: "48px 48px",
+            backgroundPosition: "0 0, 24px 24px",
+            maskImage: "radial-gradient(ellipse 85% 65% at 50% 25%, black 20%, transparent 90%)",
+          }}
+          animate={backgroundAnimated ? { opacity: [0.6, 1, 0.6] } : undefined}
+          transition={backgroundAnimated ? { duration: 10, repeat: Infinity, ease: "easeInOut" } : undefined}
         />
       )}
     </div>

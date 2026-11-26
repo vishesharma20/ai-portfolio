@@ -9,19 +9,22 @@ import { getMotionConfig } from "@/lib/design-tokens";
 import { useSectionMotion } from "@/hooks/use-section-motion";
 import { EditableText, focusEditableAtEnd } from "@/components/ui/editable-text";
 import { SectionImageBackdrop } from "@/components/portfolio/section-image-backdrop";
-import { useGeneratorStore, useGeneratorActions } from "@/lib/store/generator-store";
+import { SectionCopy } from "@/types/portfolio";
+import { usePortfolioEdit } from "@/features/portfolio/portfolio-editor-context";
 import { cn } from "@/lib/utils";
 
 interface Props {
   resumeData: ResumeData;
   tokens: DesignTokens;
+  sectionCopy: SectionCopy;
   backdrop?: import("../portfolio-template").ResolvedBackdrop;
+  animationOverride?: DesignTokens["animationStyle"];
 }
 
-export function ExperienceSection({ resumeData, tokens, backdrop }: Props) {
-  const motionCfg = useSectionMotion("experience", tokens);
-  const actions = useGeneratorActions();
-  const experienceLabel = useGeneratorStore((s) => s.sectionCopy.experienceLabel);
+export function ExperienceSection({ resumeData, tokens, sectionCopy, backdrop, animationOverride }: Props) {
+  const motionCfg = useSectionMotion(animationOverride, tokens);
+  const editCtx = usePortfolioEdit();
+  const experienceLabel = sectionCopy.experienceLabel;
 
   return (
     <section className="relative flex min-h-[55vh] flex-col justify-center overflow-hidden px-6 py-[var(--p-section-padding)] sm:px-12">
@@ -38,20 +41,22 @@ export function ExperienceSection({ resumeData, tokens, backdrop }: Props) {
           <EditableText
             as="p"
             value={experienceLabel}
-            onCommit={(v) => actions.updateSectionCopy("experienceLabel", v)}
+            onCommit={(v) => editCtx?.updateSectionCopy("experienceLabel", v)}
             placeholder="Experience"
             styleKey="experience.label"
             ringColor={tokens.accentColor}
             className="text-xs font-medium uppercase tracking-[0.2em]"
             style={{ color: tokens.accentColor }}
           />
-          <button
-            type="button"
-            onClick={actions.addExperience}
-            className="flex items-center gap-1 text-xs opacity-50 transition-opacity hover:opacity-100"
-          >
-            <Plus className="h-3.5 w-3.5" /> Add role
-          </button>
+          {editCtx && (
+            <button
+              type="button"
+              onClick={editCtx.addExperience}
+              className="flex items-center gap-1 text-xs opacity-50 transition-opacity hover:opacity-100"
+            >
+              <Plus className="h-3.5 w-3.5" /> Add role
+            </button>
+          )}
         </div>
         <div className="flex flex-col gap-[var(--p-gap)]">
           {resumeData.experience.map((exp, i) => (
@@ -61,17 +66,18 @@ export function ExperienceSection({ resumeData, tokens, backdrop }: Props) {
               index={i}
               tokens={tokens}
               motionCfg={motionCfg}
-              onUpdate={(partial) => actions.updateExperience(exp.id, partial)}
-              onRemove={() => actions.removeExperience(exp.id)}
-              onUpdateHighlight={(hi, v) => actions.updateHighlight(exp.id, hi, v)}
-              onAddHighlight={() => actions.addHighlight(exp.id)}
-              onRemoveHighlight={(hi) => actions.removeHighlight(exp.id, hi)}
+              editable={Boolean(editCtx)}
+              onUpdate={(partial) => editCtx?.updateExperience(exp.id, partial)}
+              onRemove={() => editCtx?.removeExperience(exp.id)}
+              onUpdateHighlight={(hi, v) => editCtx?.updateHighlight(exp.id, hi, v)}
+              onAddHighlight={() => editCtx?.addHighlight(exp.id)}
+              onRemoveHighlight={(hi) => editCtx?.removeHighlight(exp.id, hi)}
             />
           ))}
-          {resumeData.experience.length === 0 && (
+          {resumeData.experience.length === 0 && editCtx && (
             <button
               type="button"
-              onClick={actions.addExperience}
+              onClick={editCtx.addExperience}
               className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-current py-8 text-sm opacity-40 transition-opacity hover:opacity-80"
             >
               <Plus className="h-4 w-4" /> Add your first role
@@ -88,6 +94,7 @@ function ExperienceEntry({
   index,
   tokens,
   motionCfg,
+  editable,
   onUpdate,
   onRemove,
   onUpdateHighlight,
@@ -98,6 +105,7 @@ function ExperienceEntry({
   index: number;
   tokens: DesignTokens;
   motionCfg: ReturnType<typeof getMotionConfig>;
+  editable: boolean;
   onUpdate: (partial: Partial<Experience>) => void;
   onRemove: () => void;
   onUpdateHighlight: (i: number, v: string) => void;
@@ -123,14 +131,16 @@ function ExperienceEntry({
       className="group relative grid grid-cols-1 gap-2 border-b pb-[var(--p-gap)] sm:grid-cols-[140px_1fr]"
       style={{ borderColor: "rgba(255,255,255,0.08)" }}
     >
-      <button
-        type="button"
-        onClick={onRemove}
-        aria-label="Remove this role"
-        className="absolute -right-1 -top-1 rounded-full p-1 opacity-0 transition-opacity hover:bg-black/10 group-hover:opacity-50 hover:!opacity-100"
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-      </button>
+      {editable && (
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label="Remove this role"
+          className="absolute -right-1 -top-1 rounded-full p-1 opacity-0 transition-opacity hover:bg-black/10 group-hover:opacity-50 hover:!opacity-100"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      )}
 
       <p className="flex items-center gap-1.5 text-sm opacity-50">
         <EditableText
@@ -190,24 +200,28 @@ function ExperienceEntry({
                 styleKey={`experience.${exp.id}.highlight.${hi}`}
                 className="flex-1"
               />
-              <button
-                type="button"
-                onClick={() => onRemoveHighlight(hi)}
-                aria-label="Remove highlight"
-                className="shrink-0 rounded-full p-0.5 opacity-0 transition-opacity hover:bg-black/10 group-hover/h:opacity-60 hover:!opacity-100"
-              >
-                <X className="h-3 w-3" />
-              </button>
+              {editable && (
+                <button
+                  type="button"
+                  onClick={() => onRemoveHighlight(hi)}
+                  aria-label="Remove highlight"
+                  className="shrink-0 rounded-full p-0.5 opacity-0 transition-opacity hover:bg-black/10 group-hover/h:opacity-60 hover:!opacity-100"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
             </li>
           ))}
         </ul>
-        <button
-          type="button"
-          onClick={handleAddHighlight}
-          className="mt-2 flex items-center gap-1 text-xs opacity-40 transition-opacity hover:opacity-80"
-        >
-          <Plus className="h-3 w-3" /> Add highlight
-        </button>
+        {editable && (
+          <button
+            type="button"
+            onClick={handleAddHighlight}
+            className="mt-2 flex items-center gap-1 text-xs opacity-40 transition-opacity hover:opacity-80"
+          >
+            <Plus className="h-3 w-3" /> Add highlight
+          </button>
+        )}
       </div>
     </motion.div>
   );

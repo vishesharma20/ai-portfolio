@@ -28,8 +28,12 @@ import {
   Palette,
   Move,
   PartyPopper,
+  Heart,
+  Sparkles,
 } from "lucide-react";
-import { useGeneratorStore, useGeneratorActions, StickerMotion } from "@/lib/store/generator-store";
+import { usePortfolioEdit } from "@/features/portfolio/portfolio-editor-context";
+import { usePrefersReducedMotion } from "@/hooks/use-reduced-motion";
+import { Decoration, StickerMotion } from "@/types/portfolio";
 import { isRecolorableSvg, recolorSvgToDataUrl, SVG_TEMPLATE_COLOR } from "@/lib/svg-utils";
 
 function clamp(n: number, min: number, max: number) {
@@ -56,6 +60,13 @@ const MOTION_LIST: StickerMotion[] = [
   "orbit",
   "drift",
   "tada",
+  "heartbeat",
+  "wobble",
+  "twinkle",
+  "bob",
+  "breathe",
+  "flip",
+  "levitate",
 ];
 
 const MOTION_ICONS: Record<StickerMotion, typeof Ban> = {
@@ -70,6 +81,13 @@ const MOTION_ICONS: Record<StickerMotion, typeof Ban> = {
   orbit: Orbit,
   drift: Move,
   tada: PartyPopper,
+  heartbeat: Heart,
+  wobble: RefreshCw,
+  twinkle: Sparkles,
+  bob: ArrowUpDown,
+  breathe: Wind,
+  flip: RefreshCw,
+  levitate: Orbit,
 };
 
 const MOTION_PRESETS: Record<Exclude<StickerMotion, "none">, { animate: TargetAndTransition; transition: Transition }> = {
@@ -92,6 +110,13 @@ const MOTION_PRESETS: Record<Exclude<StickerMotion, "none">, { animate: TargetAn
     animate: { scale: [1, 1.2, 0.95, 1.15, 1], rotate: [0, -6, 6, -3, 0] },
     transition: { duration: 1.4, repeat: Infinity, repeatDelay: 1.2, ease: "easeInOut" },
   },
+  heartbeat: { animate: { scale: [1, 1.12, 0.98, 1.16, 1] }, transition: { duration: 1.1, repeat: Infinity, ease: "easeInOut" } },
+  wobble: { animate: { rotate: [0, -10, 8, -6, 4, 0], x: [0, -3, 3, -2, 1, 0] }, transition: { duration: 1.6, repeat: Infinity, ease: "easeInOut" } },
+  twinkle: { animate: { opacity: [0.45, 1, 0.6, 1], scale: [0.94, 1.08, 0.98, 1] }, transition: { duration: 2, repeat: Infinity, ease: "easeInOut" } },
+  bob: { animate: { y: [0, -12, -4, 0], rotate: [0, 3, -3, 0] }, transition: { duration: 2.4, repeat: Infinity, ease: "easeInOut" } },
+  breathe: { animate: { scale: [1, 1.08, 1] }, transition: { duration: 3.6, repeat: Infinity, ease: "easeInOut" } },
+  flip: { animate: { rotateY: [0, 180, 360] }, transition: { duration: 3.4, repeat: Infinity, ease: "easeInOut" } },
+  levitate: { animate: { y: [0, -16, -6, 0], rotate: [0, -4, 4, 0] }, transition: { duration: 3.2, repeat: Infinity, ease: "easeInOut" } },
 };
 
 /**
@@ -99,9 +124,9 @@ const MOTION_PRESETS: Record<Exclude<StickerMotion, "none">, { animate: TargetAn
  * The layer itself ignores pointer events so it never blocks clicks on the
  * real content underneath — only individual decorations opt back in.
  */
-export function DecorationsLayer() {
-  const decorations = useGeneratorStore((s) => s.decorations);
-  const actions = useGeneratorActions();
+export function DecorationsLayer({ decorations }: { decorations: Decoration[] }) {
+  const editCtx = usePortfolioEdit();
+  const prefersReducedMotion = usePrefersReducedMotion();
   const containerRef = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -131,7 +156,7 @@ export function DecorationsLayer() {
       if (draggingId) {
         const xPercent = clamp(((e.clientX - rect.left) / rect.width) * 100, 0, 100);
         const yPercent = clamp(((e.clientY - rect.top) / rect.height) * 100, 0, 100);
-        actions.updateDecoration(draggingId, { xPercent, yPercent });
+        editCtx?.updateDecoration(draggingId, { xPercent, yPercent });
         return;
       }
 
@@ -143,7 +168,7 @@ export function DecorationsLayer() {
         const dist = Math.max(1, Math.hypot(e.clientX - centerX, e.clientY - centerY));
         const ratio = dist / resizeStartRef.current.startDist;
         const newScale = clamp(+(resizeStartRef.current.scale * ratio).toFixed(2), 0.25, 8);
-        actions.updateDecoration(resizingId, { scale: newScale });
+        editCtx?.updateDecoration(resizingId, { scale: newScale });
         return;
       }
 
@@ -154,10 +179,10 @@ export function DecorationsLayer() {
         const centerY = rect.top + (d.yPercent / 100) * rect.height;
         const angle = (Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180) / Math.PI;
         const delta = angle - rotateStartRef.current.startAngle;
-        actions.updateDecoration(rotatingId, { rotation: Math.round(rotateStartRef.current.rotation + delta) });
+        editCtx?.updateDecoration(rotatingId, { rotation: Math.round(rotateStartRef.current.rotation + delta) });
       }
     },
-    [draggingId, resizingId, rotatingId, decorations, actions]
+    [draggingId, resizingId, rotatingId, decorations, editCtx]
   );
 
   const endInteraction = useCallback(() => {
@@ -182,7 +207,7 @@ export function DecorationsLayer() {
         const panel = openPanel?.id === d.id ? openPanel.type : null;
         const flipBelow = d.yPercent < 20; // near the top of the page — open panels downward instead of clipping upward
         const nudgeCrop = (dx: number, dy: number) =>
-          actions.updateDecoration(d.id, {
+          editCtx?.updateDecoration(d.id, {
             cropX: clamp((d.cropX ?? 0) + dx, -50, 50),
             cropY: clamp((d.cropY ?? 0) + dy, -50, 50),
           });
@@ -194,6 +219,7 @@ export function DecorationsLayer() {
             className="pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 touch-none select-none"
             style={{ left: `${d.xPercent}%`, top: `${d.yPercent}%`, zIndex: isSelected ? 30 : 20 }}
             onPointerDown={(e) => {
+              if (!editCtx) return;
               e.stopPropagation();
               (e.target as HTMLElement).setPointerCapture(e.pointerId);
               setSelectedId(d.id);
@@ -216,8 +242,10 @@ export function DecorationsLayer() {
               <motion.span
                 className="block cursor-grab leading-none drop-shadow-lg active:cursor-grabbing"
                 style={{ fontSize: d.scale * 48, rotate: d.rotation }}
-                animate={d.motion && d.motion !== "none" ? MOTION_PRESETS[d.motion].animate : undefined}
-                transition={d.motion && d.motion !== "none" ? MOTION_PRESETS[d.motion].transition : undefined}
+                animate={d.motion && d.motion !== "none" && !prefersReducedMotion ? MOTION_PRESETS[d.motion].animate : undefined}
+                transition={d.motion && d.motion !== "none" && !prefersReducedMotion ? MOTION_PRESETS[d.motion].transition : undefined}
+                whileHover={d.interactive && !prefersReducedMotion ? { scale: 1.3, rotate: [0, -10, 10, 0], transition: { duration: 0.35 } } : undefined}
+                whileTap={d.interactive && !prefersReducedMotion ? { scale: 0.82, transition: { duration: 0.12 } } : undefined}
               >
                 {d.content}
               </motion.span>
@@ -225,8 +253,8 @@ export function DecorationsLayer() {
               <motion.div
                 className="cursor-grab overflow-hidden drop-shadow-lg active:cursor-grabbing"
                 style={{ width: d.scale * 96, height: d.scale * 96, borderRadius: 6, rotate: d.rotation }}
-                animate={d.motion && d.motion !== "none" ? MOTION_PRESETS[d.motion].animate : undefined}
-                transition={d.motion && d.motion !== "none" ? MOTION_PRESETS[d.motion].transition : undefined}
+                animate={d.motion && d.motion !== "none" && !prefersReducedMotion ? MOTION_PRESETS[d.motion].animate : undefined}
+                transition={d.motion && d.motion !== "none" && !prefersReducedMotion ? MOTION_PRESETS[d.motion].transition : undefined}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -301,7 +329,7 @@ export function DecorationsLayer() {
               >
                 <button
                   type="button"
-                  onClick={() => actions.updateDecoration(d.id, { cropScale: clamp((d.cropScale ?? 1) - 0.15, 1, 3) })}
+                  onClick={() => editCtx?.updateDecoration(d.id, { cropScale: clamp((d.cropScale ?? 1) - 0.15, 1, 3) })}
                   aria-label="Zoom out"
                   className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                 >
@@ -309,7 +337,7 @@ export function DecorationsLayer() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => actions.updateDecoration(d.id, { cropScale: clamp((d.cropScale ?? 1) + 0.15, 1, 3) })}
+                  onClick={() => editCtx?.updateDecoration(d.id, { cropScale: clamp((d.cropScale ?? 1) + 0.15, 1, 3) })}
                   aria-label="Zoom in"
                   className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                 >
@@ -331,7 +359,7 @@ export function DecorationsLayer() {
                 <div className="mx-0.5 h-4 w-px shrink-0 bg-border" />
                 <button
                   type="button"
-                  onClick={() => actions.updateDecoration(d.id, { cropScale: 1, cropX: 0, cropY: 0 })}
+                  onClick={() => editCtx?.updateDecoration(d.id, { cropScale: 1, cropX: 0, cropY: 0 })}
                   aria-label="Reset crop"
                   className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                 >
@@ -354,7 +382,7 @@ export function DecorationsLayer() {
                     <button
                       key={m}
                       type="button"
-                      onClick={() => actions.updateDecoration(d.id, { motion: m })}
+                      onClick={() => editCtx?.updateDecoration(d.id, { motion: m })}
                       title={m}
                       aria-label={`Motion: ${m}`}
                       className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
@@ -379,7 +407,7 @@ export function DecorationsLayer() {
                   <button
                     key={c}
                     type="button"
-                    onClick={() => actions.updateDecoration(d.id, { color: c })}
+                    onClick={() => editCtx?.updateDecoration(d.id, { color: c })}
                     aria-label={`Recolor ${c}`}
                     className={`h-5 w-5 shrink-0 rounded-full border transition-transform hover:scale-110 ${
                       (d.color ?? SVG_TEMPLATE_COLOR).toLowerCase() === c.toLowerCase()
@@ -396,7 +424,7 @@ export function DecorationsLayer() {
                   <input
                     type="color"
                     value={d.color ?? SVG_TEMPLATE_COLOR}
-                    onChange={(e) => actions.updateDecoration(d.id, { color: e.target.value })}
+                    onChange={(e) => editCtx?.updateDecoration(d.id, { color: e.target.value })}
                     className="absolute -left-1 -top-1 h-7 w-7 cursor-pointer border-0 bg-transparent p-0"
                   />
                 </label>
@@ -413,7 +441,7 @@ export function DecorationsLayer() {
                   <>
                     <button
                       type="button"
-                      onClick={() => actions.updateDecoration(d.id, { widthPx: Math.max(60, (d.widthPx ?? 260) - 40) })}
+                      onClick={() => editCtx?.updateDecoration(d.id, { widthPx: Math.max(60, (d.widthPx ?? 260) - 40) })}
                       aria-label="Shorten"
                       className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                     >
@@ -422,7 +450,7 @@ export function DecorationsLayer() {
                     <span className="px-0.5 text-[10px] text-muted-foreground">Length</span>
                     <button
                       type="button"
-                      onClick={() => actions.updateDecoration(d.id, { widthPx: Math.min(1200, (d.widthPx ?? 260) + 40) })}
+                      onClick={() => editCtx?.updateDecoration(d.id, { widthPx: Math.min(1200, (d.widthPx ?? 260) + 40) })}
                       aria-label="Lengthen (repeats the pattern to form a continuous line)"
                       className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                     >
@@ -431,7 +459,7 @@ export function DecorationsLayer() {
                     <div className="mx-0.5 h-4 w-px shrink-0 bg-border" />
                     <button
                       type="button"
-                      onClick={() => actions.updateDecoration(d.id, { heightPx: Math.max(10, (d.heightPx ?? 28) - 6) })}
+                      onClick={() => editCtx?.updateDecoration(d.id, { heightPx: Math.max(10, (d.heightPx ?? 28) - 6) })}
                       aria-label="Thinner"
                       className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                     >
@@ -440,7 +468,7 @@ export function DecorationsLayer() {
                     <span className="px-0.5 text-[10px] text-muted-foreground">Thickness</span>
                     <button
                       type="button"
-                      onClick={() => actions.updateDecoration(d.id, { heightPx: Math.min(120, (d.heightPx ?? 28) + 6) })}
+                      onClick={() => editCtx?.updateDecoration(d.id, { heightPx: Math.min(120, (d.heightPx ?? 28) + 6) })}
                       aria-label="Thicker"
                       className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                     >
@@ -463,7 +491,7 @@ export function DecorationsLayer() {
                   <>
                     <button
                       type="button"
-                      onClick={() => actions.updateDecoration(d.id, { scale: clamp(+(d.scale - 0.2).toFixed(2), 0.25, 8) })}
+                      onClick={() => editCtx?.updateDecoration(d.id, { scale: clamp(+(d.scale - 0.2).toFixed(2), 0.25, 8) })}
                       aria-label="Shrink"
                       className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                     >
@@ -471,7 +499,7 @@ export function DecorationsLayer() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => actions.updateDecoration(d.id, { scale: clamp(+(d.scale + 0.2).toFixed(2), 0.25, 8) })}
+                      onClick={() => editCtx?.updateDecoration(d.id, { scale: clamp(+(d.scale + 0.2).toFixed(2), 0.25, 8) })}
                       aria-label="Grow"
                       className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                     >
@@ -527,7 +555,7 @@ export function DecorationsLayer() {
                 <button
                   type="button"
                   onClick={() => {
-                    actions.removeDecoration(d.id);
+                    editCtx?.removeDecoration(d.id);
                     setSelectedId(null);
                     setOpenPanel(null);
                   }}

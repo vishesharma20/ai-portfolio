@@ -46,7 +46,7 @@ export function usePortfolioGeneration() {
         ...json.data,
         photoUrl: json.data.photoUrl || assets.photoDataUrl || "",
       });
-    } catch (err) {
+    } catch {
       actions.setError("We couldn't read that resume. You can fill the details in manually below.");
     } finally {
       actions.setProcessing(false);
@@ -67,7 +67,7 @@ export function usePortfolioGeneration() {
 
       const json: AnalyzeInspirationResponse = await res.json();
       actions.setDesignTokens({ ...json.tokens, backgroundImageUrl: primaryImage ?? "" });
-    } catch (err) {
+    } catch {
       actions.setError("We couldn't analyze that image, so we're using our default style instead.");
     } finally {
       actions.setProcessing(false);

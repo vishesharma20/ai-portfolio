@@ -70,8 +70,8 @@ export function StepInspiration() {
           Show us a vibe.
         </h1>
         <p className="mt-3 text-muted-foreground">
-          Optional. Upload one or more moodboard images, screenshots, or reference shots and we'll
-          derive colors, type, and mood from them. The first image also becomes your portfolio's
+          Optional. Upload one or more moodboard images, screenshots, or reference shots and we&apos;ll
+          derive colors, type, and mood from them. The first image also becomes your portfolio&apos;s
           background.
         </p>
       </div>

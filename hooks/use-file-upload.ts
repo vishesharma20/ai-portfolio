@@ -13,7 +13,7 @@ export function useFileUpload() {
     try {
       const dataUrl = await readFileAsDataUrl(file);
       return dataUrl;
-    } catch (err) {
+    } catch {
       setError("Couldn't read that file. Try a different one.");
       return null;
     } finally {

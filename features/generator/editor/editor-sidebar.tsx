@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { TemplateGallery } from "@/features/portfolio/templates/template-gallery";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,6 +10,7 @@ import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { useShallow } from "zustand/react/shallow";
 import { useGeneratorStore, useGeneratorActions, PortfolioSectionKey } from "@/lib/store/generator-store";
+import { portfolioSectionLabels } from "@/types/portfolio";
 import { getPresetForMood } from "@/lib/mood-presets";
 import { getFontFamily } from "@/lib/design-tokens";
 import { readFileAsDataUrl } from "@/lib/utils";
@@ -21,6 +23,7 @@ import {
   animationStyleOptions,
   backgroundStyleOptions,
 } from "@/types/design-tokens";
+import type { DesignTokens } from "@/types/design-tokens";
 
 const TYPOGRAPHY_LABELS: Record<string, string> = {
   "modern-sans": "Modern sans",
@@ -32,19 +35,20 @@ const TYPOGRAPHY_LABELS: Record<string, string> = {
   "bold-display": "Bold display",
   handwritten: "Handwritten",
   condensed: "Condensed",
+  "space-grotesk": "Space Grotesk",
+  "dm-sans": "DM Sans",
+  "lora-serif": "Lora",
+  rubik: "Rubik",
+  "ibm-plex-mono": "IBM Plex Mono",
+  fraunces: "Fraunces",
+  manrope: "Manrope",
+  outfit: "Outfit",
+  merriweather: "Merriweather",
+  syne: "Syne",
 };
 
 const SECTION_BG_KEYS: PortfolioSectionKey[] = ["about", "skills", "experience", "projects", "contact"];
 const SECTION_ANIM_KEYS: PortfolioSectionKey[] = ["hero", "about", "skills", "experience", "projects", "contact"];
-const SECTION_BG_LABELS: Record<PortfolioSectionKey, string> = {
-  hero: "Hero",
-  about: "About",
-  skills: "Skills",
-  experience: "Experience",
-  projects: "Projects",
-  contact: "Contact",
-};
-
 const ANIMATION_STYLE_LABELS: Record<string, string> = {
   rise: "Rise",
   fade: "Fade",
@@ -57,6 +61,16 @@ const ANIMATION_STYLE_LABELS: Record<string, string> = {
   unfold: "Unfold",
   flip: "Flip",
   none: "None",
+  swing: "Swing",
+  rotate: "Rotate",
+  squash: "Squash",
+  tilt: "Tilt",
+  spring: "Spring",
+  wipe: "Wipe",
+  glide: "Glide",
+  fold: "Fold",
+  curtain: "Curtain",
+  elastic: "Elastic",
 };
 
 const BACKGROUND_STYLE_LABELS: Record<string, string> = {
@@ -68,12 +82,105 @@ const BACKGROUND_STYLE_LABELS: Record<string, string> = {
   dots: "Dots",
   noise: "Noise",
   rays: "Rays",
+  stripes: "Stripes",
+  rings: "Rings",
+  checker: "Checker",
 };
 
 const STICKER_EMOJIS = [
   "✨", "🌸", "🦋", "💫", "⭐", "🌟", "💜", "🔥",
   "🌈", "🎨", "😊", "🌻", "🍄", "🐝", "🌙", "☁️",
   "🎈", "💐", "🌊", "🍓", "🍀", "⚡", "🌷", "🎀",
+  "🪐", "☀️", "🌼", "🌵", "🪻", "🍊", "🍉", "🍒",
+  "🧋", "🍰", "🎧", "🎸", "📚", "💡", "🪄", "🧸",
+  "🛼", "🚀", "🪁", "🎮", "💎", "🫧", "🪩", "🧩",
+  "🐬", "🦕", "🐸", "🐼", "🐧", "🦉", "🦋", "🐞",
+];
+
+const CHARACTER_STICKERS = [
+  "🐱", "🐻", "🐰", "🦊", "🐸", "🐼", "🐧", "🐢", "🐝", "🦄", "🐙", "🦖",
+  "🦝", "🐹", "🐨", "🦁", "🐯", "🐮", "🐷", "🐵", "🐺", "🦭", "🦩", "🦜",
+];
+
+const QUICK_LOOKS: { name: string; templateId: string; colors: [string, string, string]; tokens: Partial<DesignTokens> }[] = [
+  {
+    name: "Ocean Pop",
+    templateId: "glass",
+    colors: ["#38BDF8", "#A7F3D0", "#071522"],
+    tokens: { primaryColor: "#38BDF8", accentColor: "#A7F3D0", backgroundColor: "#071522", surfaceColor: "#10283A", typographyStyle: "geometric", layoutDensity: "balanced", mood: "technical", animationStyle: "fade", animationIntensity: 55, backgroundStyle: "aurora" },
+  },
+  {
+    name: "Retro Studio",
+    templateId: "brutalist",
+    colors: ["#F97316", "#FDE047", "#24140E"],
+    tokens: { primaryColor: "#F97316", accentColor: "#FDE047", backgroundColor: "#24140E", surfaceColor: "#352017", typographyStyle: "bold-display", layoutDensity: "dense", mood: "bold", animationStyle: "pop", animationIntensity: 65, backgroundStyle: "grid" },
+  },
+  {
+    name: "Soft Garden",
+    templateId: "whimsical",
+    colors: ["#86A98B", "#F3B7C8", "#172019"],
+    tokens: { primaryColor: "#86A98B", accentColor: "#F3B7C8", backgroundColor: "#172019", surfaceColor: "#202B22", typographyStyle: "rounded-friendly", layoutDensity: "airy", mood: "playful", animationStyle: "rise", animationIntensity: 40, backgroundStyle: "mesh" },
+  },
+  {
+    name: "After Hours",
+    templateId: "cinematic",
+    colors: ["#C084FC", "#F0ABFC", "#120D1C"],
+    tokens: { primaryColor: "#C084FC", accentColor: "#F0ABFC", backgroundColor: "#120D1C", surfaceColor: "#21172B", typographyStyle: "elegant-serif", layoutDensity: "airy", mood: "luxury", animationStyle: "blur", animationIntensity: 45, backgroundStyle: "rays" },
+  },
+  {
+    name: "Paper & Ink",
+    templateId: "default",
+    colors: ["#E5A94D", "#D4D4D8", "#18181B"],
+    tokens: { primaryColor: "#E5A94D", accentColor: "#D4D4D8", backgroundColor: "#18181B", surfaceColor: "#27272A", typographyStyle: "classic-serif", layoutDensity: "balanced", mood: "editorial", animationStyle: "slide", animationIntensity: 35, backgroundStyle: "plain" },
+  },
+  {
+    name: "Cyber Mint",
+    templateId: "glass",
+    colors: ["#2DD4BF", "#A3E635", "#071A1A"],
+    tokens: { primaryColor: "#2DD4BF", accentColor: "#A3E635", backgroundColor: "#071A1A", surfaceColor: "#102727", typographyStyle: "space-grotesk", layoutDensity: "compact", mood: "technical", animationStyle: "tilt", animationIntensity: 50, backgroundStyle: "checker" },
+  },
+  {
+    name: "Cherry Soda",
+    templateId: "whimsical",
+    colors: ["#FB7185", "#FDBA74", "#24131A"],
+    tokens: { primaryColor: "#FB7185", accentColor: "#FDBA74", backgroundColor: "#24131A", surfaceColor: "#38202A", typographyStyle: "rubik", layoutDensity: "airy", mood: "playful", animationStyle: "squash", animationIntensity: 55, backgroundStyle: "dots" },
+  },
+  {
+    name: "Desert Modern",
+    templateId: "cinematic",
+    colors: ["#E9A66A", "#E9D8A6", "#211A16"],
+    tokens: { primaryColor: "#E9A66A", accentColor: "#E9D8A6", backgroundColor: "#211A16", surfaceColor: "#342921", typographyStyle: "dm-sans", layoutDensity: "spacious", mood: "editorial", animationStyle: "wipe", animationIntensity: 30, backgroundStyle: "stripes" },
+  },
+  {
+    name: "Signal Boost",
+    templateId: "brutalist",
+    colors: ["#F43F5E", "#F8FAFC", "#111827"],
+    tokens: { primaryColor: "#F43F5E", accentColor: "#F8FAFC", backgroundColor: "#111827", surfaceColor: "#1F2937", typographyStyle: "ibm-plex-mono", layoutDensity: "dense", mood: "bold", animationStyle: "spring", animationIntensity: 75, backgroundStyle: "rings" },
+  },
+  {
+    name: "Lavender Paper",
+    templateId: "default",
+    colors: ["#A78BFA", "#F0ABFC", "#191522"],
+    tokens: { primaryColor: "#A78BFA", accentColor: "#F0ABFC", backgroundColor: "#191522", surfaceColor: "#292238", typographyStyle: "fraunces", layoutDensity: "balanced", mood: "luxury", animationStyle: "rotate", animationIntensity: 38, backgroundStyle: "mesh" },
+  },
+  {
+    name: "Prism Bento",
+    templateId: "bento",
+    colors: ["#60A5FA", "#F472B6", "#101426"],
+    tokens: { primaryColor: "#60A5FA", accentColor: "#F472B6", backgroundColor: "#101426", surfaceColor: "#1C2340", typographyStyle: "outfit", layoutDensity: "compact", mood: "playful", animationStyle: "elastic", animationIntensity: 60, backgroundStyle: "rings" },
+  },
+  {
+    name: "Neon Circuit",
+    templateId: "neon",
+    colors: ["#A3E635", "#22D3EE", "#0B1118"],
+    tokens: { primaryColor: "#A3E635", accentColor: "#22D3EE", backgroundColor: "#0B1118", surfaceColor: "#131D27", typographyStyle: "syne", layoutDensity: "dense", mood: "technical", animationStyle: "glide", animationIntensity: 65, backgroundStyle: "grid" },
+  },
+  {
+    name: "Sunday Journal",
+    templateId: "editorial",
+    colors: ["#D9A66D", "#A3B18A", "#1E1B18"],
+    tokens: { primaryColor: "#D9A66D", accentColor: "#A3B18A", backgroundColor: "#1E1B18", surfaceColor: "#2B2621", typographyStyle: "merriweather", layoutDensity: "spacious", mood: "editorial", animationStyle: "curtain", animationIntensity: 32, backgroundStyle: "noise" },
+  },
 ];
 
 // Small original line-art doodles (hand-authored here, not sourced from any
@@ -238,7 +345,7 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
 export function EditorSidebar() {
   const [expandedBgSection, setExpandedBgSection] = useState<PortfolioSectionKey | null>(null);
   const [expandedAnimSection, setExpandedAnimSection] = useState<PortfolioSectionKey | null>(null);
-  const { resumeData, designTokens, assets, sectionBackgrounds, sectionAnimations, sectionVisibility } = useGeneratorStore(
+  const { resumeData, designTokens, assets, sectionBackgrounds, sectionAnimations, sectionVisibility, templateId } = useGeneratorStore(
     useShallow((s) => ({
       resumeData: s.resumeData,
       designTokens: s.designTokens,
@@ -246,6 +353,7 @@ export function EditorSidebar() {
       sectionBackgrounds: s.sectionBackgrounds,
       sectionAnimations: s.sectionAnimations,
       sectionVisibility: s.sectionVisibility,
+      templateId: s.templateId,
     }))
   );
   const actions = useGeneratorActions();
@@ -255,6 +363,7 @@ export function EditorSidebar() {
       <div className="border-b border-border p-4">
         <Tabs defaultValue="content">
           <TabsList className="w-full">
+            <TabsTrigger value="template" className="flex-1">Template</TabsTrigger>
             <TabsTrigger value="content" className="flex-1">Content</TabsTrigger>
             <TabsTrigger value="design" className="flex-1">Design</TabsTrigger>
             <TabsTrigger value="motion" className="flex-1">Motion</TabsTrigger>
@@ -262,6 +371,40 @@ export function EditorSidebar() {
           </TabsList>
 
           <div className="mt-5 max-h-[calc(100vh-13rem)] overflow-y-auto pr-1 scrollbar-thin">
+            <TabsContent value="template" className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Changes how your portfolio looks and is laid out — your content, projects, and experience stay exactly the same.
+              </p>
+              <div className="space-y-2">
+                <Label>Quick looks</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {QUICK_LOOKS.map((look) => (
+                    <button
+                      key={look.name}
+                      type="button"
+                      onClick={() => {
+                        actions.setDesignTokens(look.tokens);
+                        actions.setTemplateId(look.templateId);
+                      }}
+                      className="rounded-xl border border-border p-2.5 text-left transition-colors hover:border-primary/60 hover:bg-primary/5"
+                    >
+                      <span className="mb-2 flex gap-1.5" aria-hidden="true">
+                        {look.colors.map((color) => <span key={color} className="h-4 w-4 rounded-full border border-white/10" style={{ background: color }} />)}
+                      </span>
+                      <span className="block text-xs font-medium">{look.name}</span>
+                      <span className="block text-[10px] text-muted-foreground">Colors, type & motion</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <TemplateGallery
+                resumeData={resumeData}
+                tokens={designTokens}
+                selectedTemplateId={templateId}
+                onSelect={actions.setTemplateId}
+              />
+            </TabsContent>
+
             <TabsContent value="content" className="space-y-5">
               <div className="space-y-2">
                 <Label>Sections</Label>
@@ -281,7 +424,7 @@ export function EditorSidebar() {
                           visible ? "text-foreground" : "text-muted-foreground line-through"
                         }`}
                       >
-                        {SECTION_BG_LABELS[key]}
+                        {portfolioSectionLabels[key]}
                         {visible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                       </button>
                     );
@@ -476,7 +619,7 @@ export function EditorSidebar() {
                     ))}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Shown in the About section's photo slot. Pick a different image than the background.
+                    Shown in the About section&apos;s photo slot. Pick a different image than the background.
                   </p>
                 </div>
               )}
@@ -557,13 +700,13 @@ export function EditorSidebar() {
                     return (
                       <div key={key} className="space-y-1">
                         <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-medium text-muted-foreground">{SECTION_BG_LABELS[key]}</span>
+                          <span className="text-[11px] font-medium text-muted-foreground">{portfolioSectionLabels[key]}</span>
                           {config?.url && (
                             <button
                               type="button"
                               onClick={() => setExpandedBgSection(isExpanded ? null : key)}
                               className={`rounded p-1 transition-colors hover:bg-secondary ${isExpanded ? "text-primary" : "text-muted-foreground"}`}
-                              aria-label={`Adjust ${SECTION_BG_LABELS[key]} background`}
+                              aria-label={`Adjust ${portfolioSectionLabels[key]} background`}
                               title="Adjust blur & crop"
                             >
                               <Settings2 className="h-3 w-3" />
@@ -598,7 +741,7 @@ export function EditorSidebar() {
                               key={i}
                               type="button"
                               onClick={() => actions.setSectionBackground(key, url)}
-                              aria-label={`Use inspiration image ${i + 1} for ${SECTION_BG_LABELS[key]}`}
+                              aria-label={`Use inspiration image ${i + 1} for ${portfolioSectionLabels[key]}`}
                               className={`h-7 w-7 overflow-hidden rounded-md border transition-colors ${
                                 config?.url === url
                                   ? "border-primary ring-2 ring-primary/40"
@@ -796,12 +939,12 @@ export function EditorSidebar() {
                   return (
                     <div key={key} className="space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-medium text-muted-foreground">{SECTION_BG_LABELS[key]}</span>
+                        <span className="text-[11px] font-medium text-muted-foreground">{portfolioSectionLabels[key]}</span>
                         <button
                           type="button"
                           onClick={() => setExpandedAnimSection(isExpanded ? null : key)}
                           className={`rounded p-1 transition-colors hover:bg-secondary ${isExpanded ? "text-primary" : "text-muted-foreground"}`}
-                          aria-label={`Choose ${SECTION_BG_LABELS[key]} animation`}
+                          aria-label={`Choose ${portfolioSectionLabels[key]} animation`}
                           title="Choose animation style"
                         >
                           <Settings2 className="h-3 w-3" />
@@ -855,6 +998,24 @@ export function EditorSidebar() {
             </TabsContent>
 
             <TabsContent value="stickers" className="space-y-6">
+              <div className="space-y-1.5">
+                <Label>Interactive characters</Label>
+                <p className="text-xs text-muted-foreground">These characters wiggle when visitors hover or tap them.</p>
+                <div className="grid grid-cols-6 gap-1.5">
+                  {CHARACTER_STICKERS.map((character) => (
+                    <button
+                      key={character}
+                      type="button"
+                      onClick={() => actions.addDecoration("emoji", character, { interactive: true })}
+                      aria-label={`Add interactive ${character} character`}
+                      className="flex aspect-square items-center justify-center rounded-lg border border-primary/25 bg-primary/5 text-xl transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:bg-primary/10"
+                    >
+                      {character}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="space-y-1.5">
                 <Label>Emoji</Label>
                 <div className="grid grid-cols-6 gap-1.5">

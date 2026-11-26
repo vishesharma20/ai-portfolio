@@ -15,7 +15,7 @@ export function PreviewShowcase() {
       <div className="container">
         <div className="mx-auto mb-14 max-w-xl text-center">
           <h2 className="text-balance font-display text-4xl font-medium tracking-tight sm:text-5xl">
-            See what "generated" actually looks like.
+            See what &ldquo;generated&rdquo; actually looks like.
           </h2>
           <p className="mt-4 text-muted-foreground">
             One resume, one inspiration image, one portfolio, styled entirely from your inputs.

@@ -3,23 +3,26 @@
 import { motion } from "framer-motion";
 import { ResumeData } from "@/types/resume";
 import { DesignTokens } from "@/types/design-tokens";
+import { SectionCopy } from "@/types/portfolio";
 import { hexToRgba } from "@/lib/design-tokens";
 import { useSectionMotion } from "@/hooks/use-section-motion";
 import { EditableText } from "@/components/ui/editable-text";
 import { SectionImageBackdrop } from "@/components/portfolio/section-image-backdrop";
-import { useGeneratorStore, useGeneratorActions } from "@/lib/store/generator-store";
+import { usePortfolioEdit } from "@/features/portfolio/portfolio-editor-context";
 import { cn } from "@/lib/utils";
 
 interface Props {
   resumeData: ResumeData;
   tokens: DesignTokens;
+  sectionCopy: SectionCopy;
   backdrop?: import("../portfolio-template").ResolvedBackdrop;
+  animationOverride?: DesignTokens["animationStyle"];
 }
 
-export function AboutSection({ resumeData, tokens, backdrop }: Props) {
-  const motionCfg = useSectionMotion("about", tokens);
-  const actions = useGeneratorActions();
-  const aboutLabel = useGeneratorStore((s) => s.sectionCopy.aboutLabel);
+export function AboutSection({ resumeData, tokens, sectionCopy, backdrop, animationOverride }: Props) {
+  const motionCfg = useSectionMotion(animationOverride, tokens);
+  const editCtx = usePortfolioEdit();
+  const aboutLabel = sectionCopy.aboutLabel;
 
   return (
     <section className="relative flex min-h-[55vh] flex-col justify-center overflow-hidden px-6 py-[var(--p-section-padding)] sm:px-12">
@@ -55,7 +58,7 @@ export function AboutSection({ resumeData, tokens, backdrop }: Props) {
           <EditableText
             as="p"
             value={aboutLabel}
-            onCommit={(v) => actions.updateSectionCopy("aboutLabel", v)}
+            onCommit={(v) => editCtx?.updateSectionCopy("aboutLabel", v)}
             placeholder="About"
             styleKey="about.label"
             ringColor={tokens.accentColor}
@@ -66,7 +69,7 @@ export function AboutSection({ resumeData, tokens, backdrop }: Props) {
             as="p"
             multiline
             value={resumeData.summary}
-            onCommit={(v) => actions.updateResumeField("summary", v)}
+            onCommit={(v) => editCtx?.updateResumeField("summary", v)}
             placeholder="A short, compelling summary of your work and what drives it goes here."
             ringColor={tokens.accentColor}
             styleKey="about.summary"
@@ -75,7 +78,7 @@ export function AboutSection({ resumeData, tokens, backdrop }: Props) {
           <EditableText
             as="p"
             value={resumeData.location}
-            onCommit={(v) => actions.updateResumeField("location", v)}
+            onCommit={(v) => editCtx?.updateResumeField("location", v)}
             placeholder="Your location"
             ringColor={tokens.accentColor}
             styleKey="about.location"

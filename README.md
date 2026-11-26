@@ -7,36 +7,56 @@ style → generate → edit → preview**, built to be extended rather than thro
 
 ## Quick start
 
+You can open the landing page and try the generator without Docker or a database:
+
 ```bash
 npm install
 npm run dev
 ```
 
-Open http://localhost:3000. No configuration is required — the app works fully out of the box
-using a deterministic mock AI layer (see below).
+Open http://localhost:3000. In this mode, generated work is temporary and stays in the browser
+session. Accounts, the dashboard, and saving portfolios need PostgreSQL.
+
+### Turn on accounts and saving
+
+Copy the example environment file and set `DATABASE_URL` to a running PostgreSQL database plus
+`BETTER_AUTH_SECRET` in `.env.local`:
+
+```powershell
+Copy-Item .env.example .env.local
+npm run db:push   # creates the tables, once
+npm run dev
+```
+
+Resume/inspiration-image AI extraction is separately optional (see below).
 
 ### Optional: real AI extraction
 
 ```bash
-cp .env.example .env.local
-# then set OPENAI_API_KEY=sk-...
+# in .env.local, set GROQ_API_KEY=...
 ```
 
-With a key set, resume extraction uses `gpt-4o-mini` (structured JSON output) and inspiration
-analysis uses vision. Without a key, both fall back automatically to deterministic local logic —
-the product never breaks or blocks on missing configuration.
+With a key set, resume extraction and inspiration analysis go through Groq's OpenAI-compatible
+API. Without a key, both fall back automatically to deterministic local logic — that part of the
+product never breaks or blocks on missing configuration. See `.env.example` for the full list of
+optional keys (`GROQ_API_KEY`, `GITHUB_TOKEN`).
 
 ## The flow
 
 1. **Landing** (`/`) — marketing page: hero, features, example preview, CTA.
-2. **Generator** (`/generator`) — a 5-step wizard:
-   - **Upload** — resume (PDF/DOCX) or manual entry, optional profile photo
+2. **Login / signup** (`/login`, `/signup`) — Better Auth email/password.
+3. **Dashboard** (`/dashboard`) — lists the signed-in user's saved portfolios.
+4. **Generator** (`/generator`) — a multi-step wizard:
+   - **Upload** — resume (PDF/DOCX), GitHub import, or manual entry, optional profile photo
    - **Confirm** — review/edit extracted data (React Hook Form + Zod on the core fields,
      direct store editing for dynamic lists)
    - **Inspiration** — optional image upload, simulated/AI style analysis → design tokens
    - **Generating** — a short animated transition
-   - **Editor & Preview** — sidebar editor (content / design / motion tabs) + live desktop/mobile
-     preview of the generated portfolio, updating instantly
+   - **Editor & Preview** (`/dashboard/portfolio/[id]`) — sidebar editor (content / design /
+     motion tabs) + live desktop/mobile preview, with inline text editing, undo/redo, and
+     autosave (debounced, race-safe — see `lib/portfolio/save-coordinator.ts`) persisting to
+     Postgres as you edit. A save-status indicator (saving / saved / error, with retry) sits in
+     the editor header.
 
 ## Architecture
 
@@ -67,9 +87,23 @@ lib/
   design-tokens.ts      Pure functions mapping tokens -> font stacks / spacing / motion config
   utils.ts              cn(), id generation, file->dataURL
 
-types/                  Zod schemas + inferred types (ResumeData, DesignTokens, GeneratorState) —
-                        the contracts every layer above builds on
-hooks/                  useFileUpload, usePortfolioGeneration (orchestrates the two API calls)
+types/                  Zod schemas + inferred types (ResumeData, DesignTokens, GeneratorState,
+                        Portfolio — the canonical persisted model) — the contracts every layer
+                        above builds on
+hooks/                  useFileUpload, usePortfolioGeneration (orchestrates the two API calls),
+                        usePortfolioPersistence (autosave — see below)
+```
+
+Persistence and auth (added after the original MVP slice above, not reflected in the tree):
+
+```
+lib/auth/               Better Auth setup + getCurrentUserId() helper
+lib/db/                 Drizzle schema, portfolios.ts (ownership-scoped CRUD), actions.ts
+                        (the "use server" actions the client calls)
+lib/portfolio/          convert.ts (canonical Portfolio <-> editor-state), defaults.ts,
+                        save-coordinator.ts (race-safe autosave queue — see its own doc comment)
+app/dashboard/          Portfolio list + the editor/preview routes
+middleware.ts           Route protection (redirects signed-out users away from /dashboard)
 ```
 
 **Why it's structured this way:** business logic (`lib/`) never imports from `components/` or
@@ -120,6 +154,18 @@ Per the brief, these are structurally anticipated but intentionally not implemen
 
 ## Tech stack
 
-Next.js 15 (App Router) · TypeScript · Tailwind CSS · shadcn/ui-pattern components · Framer
-Motion · GSAP (ScrollTrigger, used in the generated portfolio's hero) · React Hook Form + Zod ·
-Zustand · unpdf + mammoth · OpenAI SDK (optional)
+Next.js 15 (App Router) · React 19 · TypeScript · Tailwind CSS · shadcn/ui-pattern components ·
+Framer Motion · GSAP (ScrollTrigger, used in the generated portfolio's hero) · React Hook Form +
+Zod · Zustand · Better Auth · PostgreSQL + Drizzle ORM · Vitest · unpdf + mammoth · Groq
+(OpenAI-compatible SDK, optional)
+
+## Testing
+
+```bash
+npm run test
+```
+
+Runs Vitest: unit tests for the autosave save coordinator (`lib/portfolio/save-coordinator.ts`)
+plus a hook-level test that exercises the portfolio-creation race condition
+(`hooks/use-portfolio-persistence.ts`). `npx tsc --noEmit` and `npm run lint` are also available
+for type-checking and linting respectively.

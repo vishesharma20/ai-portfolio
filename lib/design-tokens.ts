@@ -18,6 +18,26 @@ export function getFontFamily(style: DesignTokens["typographyStyle"]): string {
       return "'Caveat', cursive";
     case "condensed":
       return "'Oswald', 'Arial Narrow', sans-serif";
+    case "space-grotesk":
+      return "'Space Grotesk', system-ui, sans-serif";
+    case "dm-sans":
+      return "'DM Sans', system-ui, sans-serif";
+    case "lora-serif":
+      return "'Lora', Georgia, serif";
+    case "rubik":
+      return "'Rubik', system-ui, sans-serif";
+    case "ibm-plex-mono":
+      return "'IBM Plex Mono', ui-monospace, monospace";
+    case "fraunces":
+      return "'Fraunces', Georgia, serif";
+    case "manrope":
+      return "'Manrope', system-ui, sans-serif";
+    case "outfit":
+      return "'Outfit', system-ui, sans-serif";
+    case "merriweather":
+      return "'Merriweather', Georgia, serif";
+    case "syne":
+      return "'Syne', system-ui, sans-serif";
     case "modern-sans":
     default:
       return "'Inter', system-ui, sans-serif";
@@ -29,10 +49,14 @@ export function getSectionSpacing(density: DesignTokens["layoutDensity"]): {
   gap: string;
 } {
   switch (density) {
+    case "spacious":
+      return { sectionPadding: "clamp(5rem,12vw,9rem)", gap: "clamp(2.5rem,5vw,4rem)" };
     case "airy":
       return { sectionPadding: "clamp(4rem,10vw,8rem)", gap: "clamp(2rem,4vw,3.5rem)" };
     case "dense":
       return { sectionPadding: "clamp(2rem,5vw,4rem)", gap: "clamp(1rem,2vw,1.5rem)" };
+    case "compact":
+      return { sectionPadding: "clamp(1.5rem,4vw,3rem)", gap: "clamp(0.75rem,1.5vw,1.25rem)" };
     case "balanced":
     default:
       return { sectionPadding: "clamp(3rem,7vw,6rem)", gap: "clamp(1.5rem,3vw,2.5rem)" };
@@ -66,6 +90,26 @@ function buildVariant(
       return { initial: { opacity: 0, scaleX: 0 }, animate: { opacity: 1, scaleX: 1 } };
     case "flip":
       return { initial: { opacity: 0, rotateX: -75 }, animate: { opacity: 1, rotateX: 0 } };
+    case "swing":
+      return { initial: { opacity: 0, rotate: -12, y: yOffset / 2 }, animate: { opacity: 1, rotate: 0, y: 0 } };
+    case "rotate":
+      return { initial: { opacity: 0, rotate: -18, scale: 0.9 }, animate: { opacity: 1, rotate: 0, scale: 1 } };
+    case "squash":
+      return { initial: { opacity: 0, scaleX: 1.12, scaleY: 0.78, y: yOffset / 2 }, animate: { opacity: 1, scaleX: 1, scaleY: 1, y: 0 } };
+    case "tilt":
+      return { initial: { opacity: 0, rotateY: -22, x: xOffset / 2 }, animate: { opacity: 1, rotateY: 0, x: 0 } };
+    case "spring":
+      return { initial: { opacity: 0, y: yOffset, scale: 0.88 }, animate: { opacity: 1, y: 0, scale: 1 } };
+    case "wipe":
+      return { initial: { opacity: 0, clipPath: "inset(0 100% 0 0)" }, animate: { opacity: 1, clipPath: "inset(0 0% 0 0)" } };
+    case "glide":
+      return { initial: { opacity: 0, x: xOffset, y: yOffset * 0.25 }, animate: { opacity: 1, x: 0, y: 0 } };
+    case "fold":
+      return { initial: { opacity: 0, rotateY: -75, scaleX: 0.75 }, animate: { opacity: 1, rotateY: 0, scaleX: 1 } };
+    case "curtain":
+      return { initial: { opacity: 0, clipPath: "inset(0 0 100% 0)" }, animate: { opacity: 1, clipPath: "inset(0 0 0% 0)" } };
+    case "elastic":
+      return { initial: { opacity: 0, scale: 0.65 }, animate: { opacity: 1, scale: 1 } };
     case "none":
       return { initial: undefined, animate: { opacity: 1 } };
     case "rise":
@@ -84,7 +128,7 @@ export function getMotionConfig(intensity: number, style: DesignTokens["animatio
   const scaleFrom = 0.94 - t * 0.1; // 0.94 - 0.84
   const blurFrom = 4 + t * 10; // 4 - 14px
   const variant = buildVariant(style, yOffset, xOffset, scaleFrom, blurFrom);
-  const isSpring = style === "bounce" || style === "pop" || style === "drop";
+  const isSpring = style === "bounce" || style === "pop" || style === "drop" || style === "spring" || style === "squash" || style === "elastic";
   const duration = 0.4 + t * 0.5; // 0.4 - 0.9s
 
   return {

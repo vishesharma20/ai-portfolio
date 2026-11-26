@@ -2,8 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { hexToRgba } from "@/lib/design-tokens";
-import { useGeneratorStore, useGeneratorActions, TextAnimation } from "@/lib/store/generator-store";
+import { getFontFamily, hexToRgba } from "@/lib/design-tokens";
+import { typographyStyleOptions } from "@/types/design-tokens";
+import { TextAnimation } from "@/types/portfolio";
+import { usePortfolioEdit } from "@/features/portfolio/portfolio-editor-context";
+import { usePrefersReducedMotion } from "@/hooks/use-reduced-motion";
 import { TextFormatToolbar } from "@/components/ui/text-format-toolbar";
 
 const TEXT_ANIM_VARIANTS: Record<
@@ -11,6 +14,10 @@ const TEXT_ANIM_VARIANTS: Record<
   { initial: object; animate: object; transition: object }
 > = {
   fade: { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { duration: 0.6, ease: "easeOut" } },
+  zoom: { initial: { opacity: 0, scale: 0.72 }, animate: { opacity: 1, scale: 1 }, transition: { duration: 0.6, ease: "easeOut" } },
+  flip: { initial: { opacity: 0, rotateX: -80 }, animate: { opacity: 1, rotateX: 0 }, transition: { duration: 0.7, ease: "easeOut" } },
+  pulse: { initial: { opacity: 0, scale: 0.88 }, animate: { opacity: 1, scale: [1, 1.06, 1] }, transition: { duration: 0.8, ease: "easeOut" } },
+  rotate: { initial: { opacity: 0, rotate: -14 }, animate: { opacity: 1, rotate: 0 }, transition: { duration: 0.65, ease: "easeOut" } },
   bounce: {
     initial: { opacity: 0, y: 24 },
     animate: { opacity: 1, y: 0 },
@@ -65,8 +72,10 @@ export function EditableText({
   const [isFocused, setIsFocused] = useState(false);
   const [rect, setRect] = useState<DOMRect | null>(null);
 
-  const override = useGeneratorStore((s) => (styleKey ? s.textStyles[styleKey] : undefined));
-  const actions = useGeneratorActions();
+  const editCtx = usePortfolioEdit();
+  const editable = Boolean(editCtx);
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const override = styleKey ? editCtx?.textStyles[styleKey] : undefined;
   const animation: TextAnimation = override?.animation ?? "none";
   const hasPlayedTypewriter = useRef(false);
   const typewriterTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -90,6 +99,10 @@ export function EditableText({
     const el = ref.current;
     if (!el || hasPlayedTypewriter.current || document.activeElement === el || !value) return;
     hasPlayedTypewriter.current = true;
+    if (prefersReducedMotion) {
+      el.textContent = value; // show the final text immediately, no character-by-character reveal
+      return;
+    }
     let i = 0;
     const stepMs = Math.min(55, Math.max(12, 1400 / value.length));
     el.textContent = "";
@@ -101,7 +114,7 @@ export function EditableText({
         typewriterTimer.current = null;
       }
     }, stepMs);
-  }, [value]);
+  }, [value, prefersReducedMotion]);
 
   const updateRect = useCallback(() => {
     if (ref.current) setRect(ref.current.getBoundingClientRect());
@@ -119,10 +132,10 @@ export function EditableText({
       window.removeEventListener("scroll", onScrollOrResize, true);
       window.removeEventListener("resize", onScrollOrResize);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFocused, updateRect, override?.color, override?.fontSizePx]);
 
   const commit = useCallback(() => {
+    if (!editable) return;
     const el = ref.current;
     if (!el) return;
     const raw = (multiline ? el.innerText : el.textContent) ?? "";
@@ -131,16 +144,17 @@ export function EditableText({
       : raw.replace(/\s+/g, " ").trim();
     if (clean !== value) onCommit(clean);
     if (el.textContent !== clean) el.textContent = clean; // normalize stray <br>/<div> from typing
-  }, [multiline, onCommit, value]);
+  }, [editable, multiline, onCommit, value]);
 
   const handleFocus = useCallback(() => {
+    if (!editable) return;
     if (typewriterTimer.current) {
       clearInterval(typewriterTimer.current);
       typewriterTimer.current = null;
       if (ref.current) ref.current.textContent = value;
     }
     if (styleKey) setIsFocused(true);
-  }, [styleKey, value]);
+  }, [editable, styleKey, value]);
 
   const handleBlur = useCallback(() => {
     if (suppressBlurRef.current) return; // a toolbar interaction is in progress — stay focused
@@ -195,35 +209,42 @@ export function EditableText({
   );
 
   const handleGrow = useCallback(() => {
-    if (!styleKey) return;
+    if (!styleKey || !editCtx) return;
     const el = ref.current;
     const current = override?.fontSizePx ?? (el ? parseFloat(getComputedStyle(el).fontSize) : 16);
-    actions.setTextStyle(styleKey, { fontSizePx: Math.min(96, Math.round(current * 1.15)) });
-  }, [styleKey, override?.fontSizePx, actions]);
+    editCtx.setTextStyle(styleKey, { fontSizePx: Math.min(96, Math.round(current * 1.15)) });
+  }, [styleKey, override?.fontSizePx, editCtx]);
 
   const handleShrink = useCallback(() => {
-    if (!styleKey) return;
+    if (!styleKey || !editCtx) return;
     const el = ref.current;
     const current = override?.fontSizePx ?? (el ? parseFloat(getComputedStyle(el).fontSize) : 16);
-    actions.setTextStyle(styleKey, { fontSizePx: Math.max(10, Math.round(current * 0.87)) });
-  }, [styleKey, override?.fontSizePx, actions]);
+    editCtx.setTextStyle(styleKey, { fontSizePx: Math.max(10, Math.round(current * 0.87)) });
+  }, [styleKey, override?.fontSizePx, editCtx]);
 
   const handleColorChange = useCallback(
     (color: string) => {
-      if (styleKey) actions.setTextStyle(styleKey, { color });
+      if (styleKey && editCtx) editCtx.setTextStyle(styleKey, { color });
     },
-    [styleKey, actions]
+    [styleKey, editCtx]
   );
 
   const handleReset = useCallback(() => {
-    if (styleKey) actions.clearTextStyle(styleKey);
-  }, [styleKey, actions]);
+    if (styleKey && editCtx) editCtx.clearTextStyle(styleKey);
+  }, [styleKey, editCtx]);
 
   const handleAnimationChange = useCallback(
     (next: TextAnimation) => {
-      if (styleKey) actions.setTextStyle(styleKey, { animation: next });
+      if (styleKey && editCtx) editCtx.setTextStyle(styleKey, { animation: next });
     },
-    [styleKey, actions]
+    [styleKey, editCtx]
+  );
+
+  const handleTypographyChange = useCallback(
+    (typographyStyle: (typeof typographyStyleOptions)[number]) => {
+      if (styleKey && editCtx) editCtx.setTextStyle(styleKey, { typographyStyle });
+    },
+    [styleKey, editCtx]
   );
 
   const themeStyle = {
@@ -234,7 +255,8 @@ export function EditableText({
   } as React.CSSProperties;
 
   const MotionTag = (motion as unknown as Record<EditableTag, React.ElementType>)[Tag];
-  const animVariant = animation !== "none" && animation !== "typewriter" ? TEXT_ANIM_VARIANTS[animation] : null;
+  const animVariant =
+    animation !== "none" && animation !== "typewriter" && !prefersReducedMotion ? TEXT_ANIM_VARIANTS[animation] : null;
   const motionProps =
     styleKey && animation !== "none"
       ? {
@@ -250,23 +272,25 @@ export function EditableText({
     <>
       <MotionTag
         ref={ref as React.Ref<never>}
-        contentEditable
-        suppressContentEditableWarning
+        contentEditable={editable}
+        suppressContentEditableWarning={editable}
         role="textbox"
         aria-label={placeholder}
         aria-multiline={multiline}
+        aria-readonly={!editable}
         data-placeholder={placeholder}
         onFocus={handleFocus}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}
-        className={`editable-text ${className}`}
+        className={`${editable ? "editable-text" : ""} ${className}`}
         style={{
           ...themeStyle,
           whiteSpace: multiline ? "pre-wrap" : style?.whiteSpace,
           ...style,
           ...(override?.color ? { color: override.color } : {}),
           ...(override?.fontSizePx ? { fontSize: `${override.fontSizePx}px` } : {}),
+          ...(override?.typographyStyle ? { fontFamily: getFontFamily(override.typographyStyle) } : {}),
         }}
         {...motionProps}
       />
@@ -275,9 +299,11 @@ export function EditableText({
           rect={rect}
           color={override?.color ?? "#F5F3EE"}
           animation={animation}
-          hasOverride={Boolean(override?.color || override?.fontSizePx || (override?.animation && override.animation !== "none"))}
+          typographyStyle={override?.typographyStyle ?? "modern-sans"}
+          hasOverride={Boolean(override?.color || override?.fontSizePx || override?.typographyStyle || (override?.animation && override.animation !== "none"))}
           onColorChange={handleColorChange}
           onAnimationChange={handleAnimationChange}
+          onTypographyChange={handleTypographyChange}
           onGrow={handleGrow}
           onShrink={handleShrink}
           onReset={handleReset}

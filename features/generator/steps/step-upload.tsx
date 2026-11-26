@@ -57,7 +57,7 @@ export function StepUpload() {
     <div className="space-y-8">
       <div className="text-center">
         <h1 className="font-display text-3xl font-medium tracking-tight sm:text-4xl">
-          Let's start with what you've got.
+          Let&apos;s start with what you&apos;ve got.
         </h1>
         <p className="mt-3 text-muted-foreground">
           Upload a resume for instant extraction, or enter your details by hand.
@@ -100,11 +100,11 @@ export function StepUpload() {
         <Card>
           <CardHeader>
             <CardTitle>Manual entry</CardTitle>
-            <CardDescription>You'll fill in your details on the next step.</CardDescription>
+            <CardDescription>You&apos;ll fill in your details on the next step.</CardDescription>
           </CardHeader>
           <CardContent className="flex items-center gap-3 rounded-lg border border-dashed border-border bg-secondary/20 p-5 text-sm text-muted-foreground">
             <User className="h-4 w-4 shrink-0" />
-            No file needed. We'll show you an editable form with empty fields to fill in.
+            No file needed. We&apos;ll show you an editable form with empty fields to fill in.
           </CardContent>
         </Card>
       )}

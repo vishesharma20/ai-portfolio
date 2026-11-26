@@ -36,8 +36,8 @@ export const linkSchema = z.object({
 });
 
 export const resumeDataSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  title: z.string().min(1, "Title is required"),
+  name: z.string().optional().default(""),
+  title: z.string().optional().default(""),
   summary: z.string().optional().default(""),
   email: z.string().optional().default(""),
   phone: z.string().optional().default(""),

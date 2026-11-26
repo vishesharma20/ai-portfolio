@@ -95,3 +95,19 @@ html, body {
   -ms-hyphens: none;
   hyphens: none;
 }
+
+/* Global fallback for prefers-reduced-motion. useSectionMotion (the
+   per-section entrance-animation hook) already checks this and skips
+   Framer Motion entrance transitions entirely; this covers everything
+   else — CSS transitions/animations on hover states, the ambient
+   background's continuous drift, sticker motion loops — that isn't gated
+   through that hook. Scoped to animation/transition duration rather than
+   `display: none`-ing motion elements, so layout doesn't jump. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

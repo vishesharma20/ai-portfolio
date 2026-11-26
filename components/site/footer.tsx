@@ -11,7 +11,7 @@ export function Footer() {
         </div>
         <p>&copy; {new Date().getFullYear()} Portfolio AI. Built to ship, not to demo.</p>
         <div className="flex items-center gap-6">
-          <Link href="/generator" className="hover:text-foreground">Generator</Link>
+          <Link href="/dashboard" className="hover:text-foreground">Dashboard</Link>
           <a href="#features" className="hover:text-foreground">Features</a>
           <a href="#faq" className="hover:text-foreground">FAQ</a>
         </div>

@@ -9,19 +9,22 @@ import { getMotionConfig, hexToRgba } from "@/lib/design-tokens";
 import { useSectionMotion } from "@/hooks/use-section-motion";
 import { EditableText, focusEditableAtEnd } from "@/components/ui/editable-text";
 import { SectionImageBackdrop } from "@/components/portfolio/section-image-backdrop";
-import { useGeneratorStore, useGeneratorActions } from "@/lib/store/generator-store";
+import { SectionCopy } from "@/types/portfolio";
+import { usePortfolioEdit } from "@/features/portfolio/portfolio-editor-context";
 import { cn } from "@/lib/utils";
 
 interface Props {
   resumeData: ResumeData;
   tokens: DesignTokens;
+  sectionCopy: SectionCopy;
   backdrop?: import("../portfolio-template").ResolvedBackdrop;
+  animationOverride?: DesignTokens["animationStyle"];
 }
 
-export function ProjectsSection({ resumeData, tokens, backdrop }: Props) {
-  const motionCfg = useSectionMotion("projects", tokens);
-  const actions = useGeneratorActions();
-  const projectsLabel = useGeneratorStore((s) => s.sectionCopy.projectsLabel);
+export function ProjectsSection({ resumeData, tokens, sectionCopy, backdrop, animationOverride }: Props) {
+  const motionCfg = useSectionMotion(animationOverride, tokens);
+  const editCtx = usePortfolioEdit();
+  const projectsLabel = sectionCopy.projectsLabel;
 
   return (
     <section className="relative flex min-h-[55vh] flex-col justify-center overflow-hidden px-6 py-[var(--p-section-padding)] sm:px-12">
@@ -38,20 +41,22 @@ export function ProjectsSection({ resumeData, tokens, backdrop }: Props) {
           <EditableText
             as="p"
             value={projectsLabel}
-            onCommit={(v) => actions.updateSectionCopy("projectsLabel", v)}
+            onCommit={(v) => editCtx?.updateSectionCopy("projectsLabel", v)}
             placeholder="Projects"
             styleKey="projects.label"
             ringColor={tokens.accentColor}
             className="text-xs font-medium uppercase tracking-[0.2em]"
             style={{ color: tokens.accentColor }}
           />
-          <button
-            type="button"
-            onClick={actions.addProject}
-            className="flex items-center gap-1 text-xs opacity-50 transition-opacity hover:opacity-100"
-          >
-            <Plus className="h-3.5 w-3.5" /> Add project
-          </button>
+          {editCtx && (
+            <button
+              type="button"
+              onClick={editCtx.addProject}
+              className="flex items-center gap-1 text-xs opacity-50 transition-opacity hover:opacity-100"
+            >
+              <Plus className="h-3.5 w-3.5" /> Add project
+            </button>
+          )}
         </div>
         <div className="grid grid-cols-1 gap-[var(--p-gap)] sm:grid-cols-2">
           {resumeData.projects.map((project, i) => (
@@ -61,18 +66,19 @@ export function ProjectsSection({ resumeData, tokens, backdrop }: Props) {
               index={i}
               tokens={tokens}
               motionCfg={motionCfg}
-              onUpdate={(partial) => actions.updateProject(project.id, partial)}
-              onRemove={() => actions.removeProject(project.id)}
-              onUpdateTag={(ti, v) => actions.updateProjectTag(project.id, ti, v)}
-              onAddTag={() => actions.addProjectTag(project.id)}
-              onRemoveTag={(ti) => actions.removeProjectTag(project.id, ti)}
+              editable={Boolean(editCtx)}
+              onUpdate={(partial) => editCtx?.updateProject(project.id, partial)}
+              onRemove={() => editCtx?.removeProject(project.id)}
+              onUpdateTag={(ti, v) => editCtx?.updateProjectTag(project.id, ti, v)}
+              onAddTag={() => editCtx?.addProjectTag(project.id)}
+              onRemoveTag={(ti) => editCtx?.removeProjectTag(project.id, ti)}
             />
           ))}
         </div>
-        {resumeData.projects.length === 0 && (
+        {resumeData.projects.length === 0 && editCtx && (
           <button
             type="button"
-            onClick={actions.addProject}
+            onClick={editCtx.addProject}
             className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-current py-8 text-sm opacity-40 transition-opacity hover:opacity-80"
           >
             <Plus className="h-4 w-4" /> Add your first project
@@ -88,6 +94,7 @@ function ProjectCard({
   index,
   tokens,
   motionCfg,
+  editable,
   onUpdate,
   onRemove,
   onUpdateTag,
@@ -98,6 +105,7 @@ function ProjectCard({
   index: number;
   tokens: DesignTokens;
   motionCfg: ReturnType<typeof getMotionConfig>;
+  editable: boolean;
   onUpdate: (partial: Partial<Project>) => void;
   onRemove: () => void;
   onUpdateTag: (i: number, v: string) => void;
@@ -152,15 +160,17 @@ function ProjectCard({
       }}
       className="group relative flex flex-col justify-between p-6"
     >
-      <button
-        type="button"
-        onClick={onRemove}
-        aria-label="Remove this project"
-        className="absolute -right-2 -top-2 rounded-full p-1.5 opacity-0 transition-opacity hover:bg-black/10 group-hover:opacity-50 hover:!opacity-100"
-        style={{ background: hexToRgba("#000000", 0.3) }}
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-      </button>
+      {editable && (
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label="Remove this project"
+          className="absolute -right-2 -top-2 rounded-full p-1.5 opacity-0 transition-opacity hover:bg-black/10 group-hover:opacity-50 hover:!opacity-100"
+          style={{ background: hexToRgba("#000000", 0.3) }}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      )}
 
       <div>
         <div className="mb-3 flex items-start justify-between gap-3">
@@ -213,24 +223,28 @@ function ProjectCard({
               styleKey={`project.${project.id}.tag.${ti}`}
               className="min-w-[2ch]"
             />
-            <button
-              type="button"
-              onClick={() => onRemoveTag(ti)}
-              aria-label="Remove tag"
-              className="ml-1 shrink-0 rounded-full opacity-0 transition-opacity group-hover/tag:opacity-70 hover:!opacity-100"
-            >
-              <X className="h-2.5 w-2.5" />
-            </button>
+            {editable && (
+              <button
+                type="button"
+                onClick={() => onRemoveTag(ti)}
+                aria-label="Remove tag"
+                className="ml-1 shrink-0 rounded-full opacity-0 transition-opacity group-hover/tag:opacity-70 hover:!opacity-100"
+              >
+                <X className="h-2.5 w-2.5" />
+              </button>
+            )}
           </span>
         ))}
-        <button
-          type="button"
-          onClick={handleAddTag}
-          className="flex items-center rounded-full border border-dashed px-2.5 py-0.5 text-[11px] opacity-40 transition-opacity hover:opacity-90"
-          style={{ borderColor: hexToRgba(tokens.accentColor, 0.4) }}
-        >
-          <Plus className="h-2.5 w-2.5" />
-        </button>
+        {editable && (
+          <button
+            type="button"
+            onClick={handleAddTag}
+            className="flex items-center rounded-full border border-dashed px-2.5 py-0.5 text-[11px] opacity-40 transition-opacity hover:opacity-90"
+            style={{ borderColor: hexToRgba(tokens.accentColor, 0.4) }}
+          >
+            <Plus className="h-2.5 w-2.5" />
+          </button>
+        )}
       </div>
 
       <EditableText
